@@ -53,7 +53,7 @@ class Apriori:
                 candidate = prev_frequent_sets[i].union(prev_frequent_sets[j])
                 if self.support(candidate) >= self.s_threshold and len(candidate) == k:
                     candidate_sets.append(candidate)
-        return candidate_sets
+        return list({frozenset(c) for c in candidate_sets})
                     
         #return list (combinations(prev_frequent_sets, k))
 
@@ -77,3 +77,4 @@ class Apriori:
 if __name__ == "__main__":
     apriori = Apriori(0.4, "data.dat")  # Set the support threshold as desired
     apriori.main()
+
