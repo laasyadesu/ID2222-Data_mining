@@ -3,10 +3,12 @@ from itertools import combinations
 
 class Apriori:
 
-    def __init__(self, s_threshold, data):
+    def __init__(self, s_threshold, c_threshold, data):
         self.s_threshold = s_threshold
+        self.c_threshold = c_threshold
         self.data = data
         self.dataset = []
+        self.frequent_itemsets = {} # To store all frequent itemsets and their support
         self.handle_data(data)
     
     def handle_data(self, data):
@@ -57,24 +59,66 @@ class Apriori:
                     
         #return list (combinations(prev_frequent_sets, k))
 
-    def main(self):
-        curr_frq = self.gen_item_sets_singleton()
-        print(curr_frq)
-        curr_frq_sets = [set([item]) for item in curr_frq]
+    def generate_association_rules(self):  
+        rules = []
 
+        #itemset is the main big set
+        
+        for itemset, support_itemset in self.frequent_itemsets.items():
+            if len(itemset) > 1:
+                # all non-empty proper subsets of the itemset
+                for i in range(1, len(itemset)):
+                    for set_X in combinations(itemset, i):
+                        set_X = frozenset(set_X)
+                        set_Y = itemset - set_X
+
+                        # Confidence(A->C) = Support(A U C) / Support(A)
+                        # (A U C) is the original itemset
+                        set_X_support = self.frequent_itemsets.get(set_X)
+                        
+                        if set_X_support:
+                            confidence = support_itemset / set_X_support
+                            if confidence >= self.c_threshold:
+                                rule = (set_X, set_Y, confidence)
+                                rules.append(rule)
+                                print(f"Rule: {set_X} -> {set_Y}, confidence: {confidence:.2f}")
+                                
+        return rules
+
+
+
+    def main(self):
+        # Start with 1-itemsets (singleton), then increase size of itemset.
+        curr_frq_singletons = self.gen_item_sets_singleton()
+        singleton_sets = {frozenset([item]): self.support({item}) for item in curr_frq_singletons}
+        self.frequent_itemsets.update(singleton_sets)
+        
+        curr_frq_sets = [set([item]) for item in curr_frq_singletons]
         k = 2
 
         while True:
-            frq_sets=self.gen_candidate_sets(curr_frq_sets, k)
-            print(frq_sets)
-            frequent_sets = self.gen_item_sets(frq_sets)
-            if  len(frequent_sets) == 0:
+            # Get candidate sets of size k
+            candidate_sets = self.gen_candidate_sets(curr_frq_sets, k)
+            if not candidate_sets:
                 break
-            print(f'final itemsets {frequent_sets}')
-            curr_frq_sets = list(frequent_sets.keys())
-            k+=1
+            
+            # Remove candidates set of current size k to get frequent k-itemsets
+            frequent_sets_k = self.gen_item_sets(candidate_sets)
+            if not frequent_sets_k:
+                break
+            
+            print(f"No. of frequent {k}-itemsets: {len(frequent_sets_k)}")
+            
+            self.frequent_itemsets.update(frequent_sets_k)           
+            curr_frq_sets = list(frequent_sets_k.keys())
+            k += 1
+        
+        # generate rules
+        self.generate_association_rules()
+
 
 if __name__ == "__main__":
-    apriori = Apriori(0.4, "data.dat")  # Set the support threshold as desired
+    # Set the support and confidence thresholds as desired
+    apriori = Apriori(s_threshold=0.3, c_threshold=0.6, data="T10I4D100K.dat")  
     apriori.main()
 
